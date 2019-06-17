@@ -51,7 +51,7 @@ export class UIManager
             this.uiList.push(ui);
             if(callback)
             {
-                callback(args);
+                callback(ui, args);
             }
         });
     }
@@ -76,17 +76,14 @@ export class UIManager
         {
             ui.node.active = true;
             ui.onShow();
-            if(callback)
-            {
-                callback();
-            }
+            callback&&callback(ui);
         }
         else
         {
             this.openUI(uiClass, 0, ()=>{
-                callback&&callback();
                 let ui = this.getUI(uiClass);
                 ui.onShow();
+                callback&&callback(ui);
             });
         }
     }
