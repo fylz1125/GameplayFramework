@@ -20,6 +20,7 @@ export class GameMain extends cc.Component
         LogWrap.warn("test warn");
         LogWrap.err("test err");
 
+
         let frameSize = cc.view.getFrameSize();
         let bFitWidth = (frameSize.width / frameSize.height) < (750 / 1334)
         cc.Canvas.instance.fitWidth = bFitWidth;
@@ -38,5 +39,13 @@ export class GameMain extends cc.Component
     update(dt)
     {
         ListenerManager.getInstance().trigger(ListenerType.LoopUpdate, dt);
+    }
+
+    public lateUpdate() {
+        let context = cc.sys.__audioSupport.context;
+        if (context.state === 'suspended') {
+            context.resume();
+            console.log(context.state);
+        }
     }
 }

@@ -2,55 +2,25 @@ import { ListenerManager } from "../Manager/ListenerManager";
 import { ListenerType } from "./ListenerType";
 import { GameDataManager } from "../Manager/GameDataManager";
 import { EGuideStatus } from "./EGuideStatus";
-
-export class PlayerInfo
-{
-    public static className = "PlayerInfo";
-
-    private _gold: number = 2000;
-    public get gold(): number
-    {
-        return this._gold;
-    }
-    public set gold(value: number)
-    {
-        this._gold = value;
-        GameDataManager.getInstance().getGameData().updatePlayerInfo();
-
-        ListenerManager.getInstance().trigger(ListenerType.GoldChanged);
-    }
-
-    private _level: number = 1;
-    public get level(): number
-    {
-        return this._level;
-    }
-    public set level(value: number)
-    {
-        this._level = value;
-        GameDataManager.getInstance().getGameData().updatePlayerInfo();
-    }
-
-    private _closeAudio: boolean = false;
-    public get closeAudio(): boolean
-    {
-        return this._closeAudio;
-    }
-    public set closeAudio(value: boolean)
-    {
-        this._closeAudio = value;
-        GameDataManager.getInstance().getGameData().updatePlayerInfo();
-    }
-}
+import WorldOtherInfo from "./Modules/WorldOtherInfo";
+import WorldInfo from "./Modules/WorldInfo";
+import { StorageUtil } from "../Utils/StorageUtil";
+import MainlandOtherInfo from "./Modules/MainlandOtherInfo";
+import MainlandInfo from "./Modules/MainlandInfo";
+import SublandInfo from "./Modules/SublandInfo";
+import SublandOtherInfo from "./Modules/SublandOtherInfo";
+import { SettingInfo } from "./Modules/SettingInfo";
 
 export class GameData
 {
     //-----------------------serializeData----------------------------
-    playerInfo: PlayerInfo = new PlayerInfo();
+    worldInfo: WorldInfo = new WorldInfo();
     //----------------------------------------------------------------
 
-    guideStatus: EGuideStatus = EGuideStatus.none;
+    curMainlandInfo: MainlandInfo = null;
+    curSublandInfo: SublandInfo = null;
 
+    guideStatus: EGuideStatus = EGuideStatus.none;
     serverTaskConfigData: ServerTaskData[] = null;
 
     constructor()
@@ -63,35 +33,126 @@ export class GameData
 
     }
 
-    initPlayerInfo(playerInfo: PlayerInfo)
+    initWorldOtherInfo(worldOtherInfo: WorldOtherInfo)
     {
-        if(playerInfo)
+        if(worldOtherInfo && Object.getOwnPropertyNames(worldOtherInfo).length > 0 )
         {
-            this.playerInfo = playerInfo;
-            this.playerInfo["__proto__"] = PlayerInfo.prototype;
+            this.worldInfo.worldOtherInfo = worldOtherInfo;
+            this.worldInfo.worldOtherInfo["__proto__"] = WorldOtherInfo.prototype;
         }
         else
         {
-            this.updatePlayerInfo();
+            this.updateWorldOtherInfo();
         }
     }
-
-    updatePlayerInfo()
+    updateWorldOtherInfo()
     {
-        // serializeData
-        //playerManager.setObjData(PlayerInfo.className, this.playerInfo);
+        StorageUtil.setLocalItemDefer(this.worldInfo.worldOtherInfo._storageKey, this.worldInfo.worldOtherInfo);
+    }
+
+    initMainlandOtherInfo(mainlandOtherInfo: MainlandOtherInfo, destMainlandOtherInfo: MainlandOtherInfo)
+    {
+        if(mainlandOtherInfo && Object.getOwnPropertyNames(mainlandOtherInfo).length > 0 )
+        {
+            destMainlandOtherInfo = mainlandOtherInfo;
+            destMainlandOtherInfo["__proto__"] = MainlandOtherInfo.prototype;
+        }
+        else
+        {
+            this.updateMainlandOtherInfo(destMainlandOtherInfo);
+        }
+    }
+    updateMainlandOtherInfo(mainlandOtherInfo: MainlandOtherInfo)
+    {
+        StorageUtil.setLocalItemDefer(mainlandOtherInfo._storageKey, mainlandOtherInfo);
+    }
+
+    initSublandOtherInfo(sublandOtherInfo: SublandOtherInfo, destSublandOtherInfo: SublandOtherInfo)
+    {
+        if(sublandOtherInfo && Object.getOwnPropertyNames(sublandOtherInfo).length > 0 )
+        {
+            destSublandOtherInfo = sublandOtherInfo;
+            destSublandOtherInfo["__proto__"] = SublandOtherInfo.prototype;
+        }
+        else
+        {
+            this.updateSublandOtherInfo(destSublandOtherInfo);
+        }
+    }
+    updateSublandOtherInfo(sublandOtherInfo: SublandOtherInfo)
+    {
+        StorageUtil.setLocalItemDefer(sublandOtherInfo._storageKey, sublandOtherInfo);
+    }
+
+    initSettingInfo(settingInfo: SettingInfo)
+    {
+        if(settingInfo && Object.getOwnPropertyNames(settingInfo).length > 0 )
+        {
+            this.worldInfo.settingInfo = settingInfo;
+            this.worldInfo.settingInfo["__proto__"] = SettingInfo.prototype;
+        }
+        else
+        {
+            this.updateSettingInfo();
+        }
+    }
+    updateSettingInfo()
+    {
+        StorageUtil.setLocalItemDefer(this.worldInfo.settingInfo._storageKey, this.worldInfo.settingInfo);
+    }
+
+    getDataKeys() {
+        var keys = {};
+        keys[this.worldInfo.settingInfo._storageKey] = this.worldInfo.settingInfo;
+        keys[this.worldInfo.worldOtherInfo._storageKey] = this.worldInfo.worldOtherInfo;
+        for(let i = 0; i < this.worldInfo.mainlandInfoList.length; ++i)
+        {
+            let mainlandInfo = this.worldInfo.mainlandInfoList[i];
+            keys[mainlandInfo.mainlandOtherInfo._storageKey] = mainlandInfo.mainlandOtherInfo;
+            for(let j = 0; j < mainlandInfo.sublandInfoList.length; ++j)
+            {
+                let sublandInfo = mainlandInfo.sublandInfoList[j];
+                keys[sublandInfo.sublandOtherInfo._storageKey] = sublandInfo.sublandOtherInfo;
+            }
+        }
+        return keys;
     }
 
     unserializeData(data)
     {
-        if(data == null)
-        {
-            this.initPlayerInfo(null);
-        }
-        else
-        {
-            // unserializeData
-        }
+        StorageUtil.register();
+        StorageUtil.getAllLocalData(this.getDataKeys(), (first)=>{
+            if(first)
+            {
+                this.initSettingInfo(null);
+                this.initWorldOtherInfo(null);
+                for(let i = 0; i < this.worldInfo.mainlandInfoList.length; ++i)
+                {
+                    let mainlandInfo = this.worldInfo.mainlandInfoList[i];
+                    this.initMainlandOtherInfo(null, mainlandInfo.mainlandOtherInfo);
+                    for(let j = 0; j < mainlandInfo.sublandInfoList.length; ++j)
+                    {
+                        let sublandInfo = mainlandInfo.sublandInfoList[j];
+                        this.initSublandOtherInfo(null, sublandInfo.sublandOtherInfo);
+                    }
+                }
+            }
+            else
+            {
+                this.initSettingInfo(StorageUtil.getGameDataItem(this.worldInfo.settingInfo._storageKey));
+                this.initWorldOtherInfo(StorageUtil.getGameDataItem(this.worldInfo.worldOtherInfo._storageKey));
+                for(let i = 0; i < this.worldInfo.mainlandInfoList.length; ++i)
+                {
+                    let mainlandInfo = this.worldInfo.mainlandInfoList[i];
+                    this.initMainlandOtherInfo(StorageUtil.getGameDataItem(mainlandInfo.mainlandOtherInfo._storageKey), mainlandInfo.mainlandOtherInfo);
+                    for(let j = 0; j < mainlandInfo.sublandInfoList.length; ++j)
+                    {
+                        let sublandInfo = mainlandInfo.sublandInfoList[j];
+                        this.initSublandOtherInfo(StorageUtil.getGameDataItem(sublandInfo.sublandOtherInfo._storageKey), sublandInfo.sublandOtherInfo);
+                    }
+                }
+            }
+        });
 
         ListenerManager.getInstance().trigger(ListenerType.GameStart);
     }
